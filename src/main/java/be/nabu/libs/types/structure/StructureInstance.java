@@ -19,6 +19,7 @@ import be.nabu.libs.types.api.ComplexType;
 import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.api.Type;
 import be.nabu.libs.types.api.TypeInstance;
+import be.nabu.libs.types.api.TypedCollectionHandlerProvider;
 import be.nabu.libs.types.java.BeanInstance;
 import be.nabu.libs.types.java.BeanResolver;
 import be.nabu.libs.types.java.BeanType;
@@ -118,7 +119,7 @@ public class StructureInstance implements ComplexContent {
 //					throw new IllegalArgumentException("The empty collection can not be converted to the single item: " + definition.getType());
 				}
 				else {
-					throw new IllegalArgumentException("The non-empty collection '" + value + "' can not be converted from " + targetType.getType() + " to the single item of type " + definition.getType());		
+					throw new IllegalArgumentException("The non-empty collection '" + value + "' for field '" + definition.getName() + "' can not be converted from " + targetType.getType() + " to the single item of type " + definition.getType());		
 				}
 			}
 		}
@@ -148,69 +149,73 @@ public class StructureInstance implements ComplexContent {
 			}
 			Object index = collectionHandler.unmarshalIndex(parsedPath.getIndex());
 			// no list set yet, generate one that matches at least the size of the minOccurs for this element
-			if (collection == null) {
+			if (collection == null && (CREATE_PARENT_FOR_NULL_VALUE || value != null)) {
 				int size = index instanceof Integer ? ((Integer) index) + 1 : 1;
 				// the collection handler must allow a null create
 				collection = collectionHandler.create(null, size);
 				values.put(parsedPath.getName(), collection);
 			}
 			
-			// simply updating that index
-			if (parsedPath.getChildPath() == null) {
-				value = convert(value, definition);
-				values.put(parsedPath.getName(), collectionHandler.set(collection, index, value));
-			}
-			else {
-				Object childObject = collectionHandler.get(collection, index);
-				ComplexContent child = null;
-				if (childObject != null) {
-					child = childObject instanceof ComplexContent ? (ComplexContent) childObject : ComplexContentWrapperFactory.getInstance().getWrapper().wrap(childObject);
+			if (collection != null) {
+				// simply updating that index
+				if (parsedPath.getChildPath() == null) {
+					value = convert(value, definition);
+					values.put(parsedPath.getName(), collectionHandler.set(collection, index, value));
 				}
-				// the child does not yet exist, instantiate it
-				if (child == null) {
-					child = ((ComplexType) definition.getType()).newInstance();
-					// if the child is a bean instance, we are going to assume the collection handler requires it
-					if (child instanceof BeanInstance) {
-						values.put(parsedPath.getName(), collectionHandler.set(collection, index, ((BeanInstance) child).getUnwrapped()));
+				else {
+					Object childObject = collectionHandler.get(collection, index);
+					ComplexContent child = null;
+					if (childObject != null) {
+						child = childObject instanceof ComplexContent ? (ComplexContent) childObject : ComplexContentWrapperFactory.getInstance().getWrapper().wrap(childObject);
 					}
-					else {
-						values.put(parsedPath.getName(), collectionHandler.set(collection, index, child));
+					// the child does not yet exist, instantiate it
+					if (child == null && (CREATE_PARENT_FOR_NULL_VALUE || value != null)) {
+						child = ((ComplexType) definition.getType()).newInstance();
+						// if the child is a bean instance, we are going to assume the collection handler requires it
+						if (child instanceof BeanInstance) {
+							values.put(parsedPath.getName(), collectionHandler.set(collection, index, ((BeanInstance) child).getUnwrapped()));
+						}
+						else {
+							values.put(parsedPath.getName(), collectionHandler.set(collection, index, child));
+						}
+					}
+					if (child != null) {
+						child.set(parsedPath.getChildPath().toString(), value);
 					}
 				}
-				child.set(parsedPath.getChildPath().toString(), value);
 			}
 		}
 		// you did not provide an index, but the target is a list
 		// this is only valid if you are setting this item (no child path) AND the value is a list
 		else if (definition.getType().isList(definition.getProperties())) {
-			CollectionHandlerProvider collectionHandler = ValueUtils.getValue(new CollectionHandlerProviderProperty(), definition.getProperties());
-			// defaults to a list
-			if (collectionHandler == null) {
-				collectionHandler = CollectionHandlerFactory.getInstance().getHandler().getHandler(List.class);
-			}
 			
 			if (parsedPath.getChildPath() != null)
 				throw new RuntimeException("Can not access list " + definition.getName() + " without an index");
 			else if (value == null)
 				values.remove(parsedPath.getName());
-			else if (!collectionHandler.getCollectionClass().isAssignableFrom(value.getClass())) {
-				CollectionHandlerProvider valueHandler = CollectionHandlerFactory.getInstance().getHandler().getHandler(value.getClass());
-				if (!collectionHandler.getIndexClass().isAssignableFrom(valueHandler.getIndexClass())) {
-					throw new RuntimeException("Without defining an index for collection " + definition.getName() + " and with incompatible indexes, you can only assign another collection of the same type to it, " + collectionHandler.getCollectionClass() + " is not compatible with " + value.getClass());
-				}
-				Collection indexes = valueHandler.getIndexes(value);
-				Object newCollection = collectionHandler.create(collectionHandler.getCollectionClass(), indexes.size());
-				for (Object index : indexes) {
-					collectionHandler.set(newCollection, index, convert(valueHandler.get(value, index), definition));
-				}
-				values.put(parsedPath.getName(), newCollection);
-			}
 			else {
-				// need to convert
-				for (Object index : collectionHandler.getIndexes(value)) {
-					collectionHandler.set(value, index, convert(collectionHandler.get(value, index), definition));
+				// in the past this code enforced the "correct" collection handler if dictated by the type, so for instance if the type says its a list and you give an array, it will transform the collection
+				// however, this removes some of the flexibility of having for example a jdbc result set as a value
+				// most of nabu does (or should) use collection handlers, so the actual type of the collection at runtime does not matter, as long as it is _a_ collection
+				// there is one exception: when integrating with java beans, they have a hard requirement for a specific type of collection but it is then up to the bean instance to enforce this, not the structure instance
+				// code updated @2016-12-06: this _can_ have unforseen side effects
+				CollectionHandlerProvider collectionHandler = CollectionHandlerFactory.getInstance().getHandler().getHandler(value.getClass());
+				if (collectionHandler == null) {
+					collectionHandler = ValueUtils.getValue(CollectionHandlerProviderProperty.getInstance(), definition.getProperties());
 				}
-				values.put(parsedPath.getName(), value);
+				if (collectionHandler == null) {
+					throw new IllegalArgumentException("Can not find a collection handler for: " + value.getClass());
+				}
+				if (collectionHandler instanceof TypedCollectionHandlerProvider && ((TypedCollectionHandlerProvider) collectionHandler).isCompatible(value, definition.getType())) {
+					values.put(parsedPath.getName(), value);
+				}
+				else {
+					// need to convert
+					for (Object index : collectionHandler.getIndexes(value)) {
+						collectionHandler.set(value, index, convert(collectionHandler.get(value, index), definition));
+					}
+					values.put(parsedPath.getName(), value);
+				}
 			}
 		}
 		// set value
@@ -220,11 +225,13 @@ public class StructureInstance implements ComplexContent {
 		else {
 			Object object = values.get(parsedPath.getName());
 			ComplexContent child = object instanceof ComplexContent || object == null ? (ComplexContent) object : ComplexContentWrapperFactory.getInstance().getWrapper().wrap(object);
-			if (child == null) {
+			if (child == null && (CREATE_PARENT_FOR_NULL_VALUE || value != null)) {
 				child = ((ComplexType) definition.getType()).newInstance();
 				values.put(parsedPath.getName(), child);
 			}
-			child.set(parsedPath.getChildPath().toString(), value);
+			if (child != null) {
+				child.set(parsedPath.getChildPath().toString(), value);
+			}
 		}
 	}
 	
