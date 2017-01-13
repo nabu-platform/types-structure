@@ -53,6 +53,10 @@ public class StructureInstance implements ComplexContent {
 	public boolean equals(Object object) {
 		if (!(object instanceof StructureInstance))
 			return false;
+		// if they are the same object, sure!
+		if (this == object) {
+			return true;
+		}
 		StructureInstance other = (StructureInstance) object;
 		// compare the definition
 		if (!getType().equals(other.getType()))
@@ -60,12 +64,12 @@ public class StructureInstance implements ComplexContent {
 		// check each child in the definition, the values must match
 		// it is possible that one instance is an upcast of a broader instance hence containing more values
 		// these additional values are *not* checked, only the ones that are covered in the definition
-		for (Element<?> element : getType()) {
+		for (Element<?> element : TypeUtils.getAllChildren(getType())) {
 			Object value = get(element.getName());
-			Object otherValue = other.values.get(value);
+			Object otherValue = other.get(element.getName());
 			if ((value == null && otherValue != null) || (value != null && otherValue == null))
 				return false;
-			else if (!value.equals(otherValue))
+			else if (value != null && !value.equals(otherValue))
 				return false;
 		}
 		return true;
