@@ -244,10 +244,10 @@ public class StructureInstance implements ComplexContent {
 	public Object get(String path) {
 		ParsedPath parsedPath = ParsedPath.parse(path);
 		Object value = values.get(parsedPath.getName());
-		Element<?> definition = getType().get(parsedPath.getName());
 		
 		// access a specific index
 		if (parsedPath.getIndex() != null) {
+			Element<?> definition = getType().get(parsedPath.getName());
 			
 			CollectionHandlerProvider collectionHandler = ValueUtils.getValue(new CollectionHandlerProviderProperty(), definition.getProperties());
 			// defaults to a list
