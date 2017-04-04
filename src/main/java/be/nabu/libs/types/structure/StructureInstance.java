@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import be.nabu.libs.converter.ConverterFactory;
 import be.nabu.libs.property.ValueUtils;
 import be.nabu.libs.types.BaseTypeInstance;
 import be.nabu.libs.types.CollectionHandlerFactory;
@@ -17,6 +18,7 @@ import be.nabu.libs.types.api.CollectionHandlerProvider;
 import be.nabu.libs.types.api.ComplexContent;
 import be.nabu.libs.types.api.ComplexType;
 import be.nabu.libs.types.api.Element;
+import be.nabu.libs.types.api.SimpleType;
 import be.nabu.libs.types.api.Type;
 import be.nabu.libs.types.api.TypeInstance;
 import be.nabu.libs.types.api.TypedCollectionHandlerProvider;
@@ -126,6 +128,11 @@ public class StructureInstance implements ComplexContent {
 					throw new IllegalArgumentException("The non-empty collection '" + value + "' for field '" + definition.getName() + "' can not be converted from " + targetType.getType() + " to the single item of type " + definition.getType());		
 				}
 			}
+		}
+		// if we can't convert it at the high level but we have a low level conversion, use that
+		// this can be used for example for clob > string conversion where clobs are _not_ wrapped as simple types
+		if (converted == null && definition.getType() instanceof SimpleType && ((ConverterFactory.getInstance().getConverter().canConvert(value.getClass(), ((SimpleType) definition.getType()).getInstanceClass())))) {
+			return ConverterFactory.getInstance().getConverter().convert(value, ((SimpleType) definition.getType()).getInstanceClass());
 		}
 		if (converted == null)
 			throw new IllegalArgumentException("The value '" + value + "' can not be converted from " + targetType.getType() + " to " + definition.getType());
