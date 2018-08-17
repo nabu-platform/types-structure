@@ -96,6 +96,12 @@ public class StructureInstance implements ComplexContent {
 		else if (definition.getType() instanceof BeanType && ((BeanType) definition.getType()).getBeanClass().isAssignableFrom(value.getClass())) {
 			return value;
 		}
+		else if (definition.getType() instanceof BeanType && value instanceof ComplexContent) {
+			Object potential = getAsBean((ComplexContent) value, ((BeanType) definition.getType()).getBeanClass());
+			if (potential != null) {
+				return potential;
+			}
+		}
 		Type type = value instanceof ComplexContent ? ((ComplexContent) value).getType() : SimpleTypeWrapperFactory.getInstance().getWrapper().wrap(value.getClass());
 		if (type == null) {
 			type = BeanResolver.getInstance().resolve(value.getClass());
@@ -281,5 +287,35 @@ public class StructureInstance implements ComplexContent {
 	@Override
 	public String toString() {
 		return "instance[" + getType() + "]";
+	}
+	
+	// we check if there are any bean instances in the cast path that might be ok
+	// suppose class A and class B extends A
+	// we define a service that requests A and we pass in an instance of B
+	// in the current setup, B can be masked as A which makes it very hard for the code to determine whether the A is also of type B (for example optional logic based on more information)
+	// so we check if anywhere along the line we obscured a bean instance that is of a compatible type
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	private static Object getAsBean(ComplexContent content, Class<?> clazz) {
+		ComplexContent reference = content;
+		while (reference != null) {
+			if (reference instanceof BeanInstance && clazz.isAssignableFrom(((BeanInstance) reference).getUnwrapped().getClass())) {
+				return ((BeanInstance) reference).getUnwrapped();
+			}
+			// subtle difference: for example masked content does not have a bean instance but could have a bean type
+			else if (reference.getType() instanceof BeanType && clazz.isAssignableFrom(((BeanType) reference.getType()).getBeanClass())) {
+				return TypeUtils.getAsBean(reference, ((BeanType) reference.getType()).getBeanClass());
+			}
+			else if (reference instanceof StructureInstanceDowncastReference) {
+				reference = ((StructureInstanceDowncastReference) reference).getReference();
+			}
+			else if (reference instanceof StructureInstanceUpcastReference) {
+				reference = ((StructureInstanceUpcastReference) reference).getReference();
+			}
+			else {
+				break;
+			}
+			// TODO: in theory we should check if your each type along the way is potentially an extension to the bean type, that would also result in a valid bean
+		}
+		return null;
 	}
 }
