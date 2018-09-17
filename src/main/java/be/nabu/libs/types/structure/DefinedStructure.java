@@ -17,7 +17,7 @@ public class DefinedStructure extends Structure implements DefinedType {
 	
 	@Override
 	public String toString() {
-		return "structure[" + getName() + "]";
+		return "structure[" + getId() + "]";
 	}
 
 

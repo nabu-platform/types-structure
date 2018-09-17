@@ -109,10 +109,15 @@ public class StructureInstance implements ComplexContent {
 		if (type.equals(definition.getType())) {
 			return value;
 		}
+		
 		// need to wrap class
 		TypeInstance targetType = new BaseTypeInstance(type);
 		if (TypeUtils.isSubset(targetType, definition))
 			return value;
+		// if the definition is a simple type and we have a complex simple type, we use the value content instead of the actual type
+		else if (definition.getType() instanceof SimpleType && type instanceof ComplexType && type instanceof SimpleType && value instanceof ComplexContent) {
+			value = ((ComplexContent) value).get(ComplexType.SIMPLE_TYPE_VALUE);
+		}
 		Object converted = TypeConverterFactory.getInstance().getConverter().convert(value, targetType, definition);
 		// if we were unable to convert and the value is a collection of size 1 and the target is not a collection, let's try to just cast the first element
 		if (converted == null && !definition.getType().isList(definition.getProperties())) {

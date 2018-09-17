@@ -123,6 +123,6 @@ public class StructureInstanceDowncastReference extends StructureInstance {
 	
 	@Override
 	public String toString() {
-		return "instance[" + getType().toString() + "]";
+		return "instance[-" + getType().toString() + "]";
 	}
 }

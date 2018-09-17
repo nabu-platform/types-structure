@@ -66,5 +66,9 @@ public class StructureInstanceUpcastReference extends StructureInstance {
 	public Object get(String path) {
 		return reference.get(path);
 	}
-	
+
+	@Override
+	public String toString() {
+		return "instance[+" + getType().toString() + "]";
+	}
 }
