@@ -1,7 +1,7 @@
 package be.nabu.libs.types.structure;
 
-
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -26,6 +26,7 @@ import be.nabu.libs.types.properties.AttributeQualifiedDefaultProperty;
 import be.nabu.libs.types.properties.ElementQualifiedDefaultProperty;
 import be.nabu.libs.types.properties.NameProperty;
 import be.nabu.libs.types.properties.NamespaceProperty;
+import be.nabu.libs.types.properties.RestrictProperty;
 import be.nabu.libs.types.properties.ValidateProperty;
 import be.nabu.libs.validator.MultipleValidator;
 import be.nabu.libs.validator.api.ValidationMessage;
@@ -63,7 +64,7 @@ public class Structure extends BaseType<StructureInstance> implements ComplexTyp
 	 * Contains restrictions placed upon the referenced structure
 	 */
 	private Map<String, Element<?>> restrictions = new HashMap<String, Element<?>>();
-
+	
 	public Structure() {
 		// auto create
 	}
@@ -90,6 +91,7 @@ public class Structure extends BaseType<StructureInstance> implements ComplexTyp
 		Set<Property<?>> properties = super.getSupportedProperties(values);
 		properties.add(SuperTypeProperty.getInstance());
 		properties.add(ValidateProperty.getInstance());
+		properties.add(RestrictProperty.getInstance());
 		return properties;
 	}
 		
@@ -107,7 +109,22 @@ public class Structure extends BaseType<StructureInstance> implements ComplexTyp
 			}
 		}
 		if (list.isEmpty()) {
-			children.add(element);
+			boolean isRestricted = false;
+			if (getSuperType() instanceof ComplexType) {
+				Element<?> parentElement = ((ComplexType) getSuperType()).get(element.getName());
+				if (parentElement != null) {
+					String value = ValueUtils.getValue(RestrictProperty.getInstance(), getProperties());
+					// if we restrict it from the parent, we can redefine it as we please
+					List<String> restricted = value == null || value.trim().isEmpty() ? new ArrayList<String>() : Arrays.asList(value.trim().split("[\\s]*,[\\s]*"));
+					if (restricted.indexOf(element.getName()) < 0) {
+						restrictions.put(element.getName(), element);
+						isRestricted = true;
+					}
+				}
+			}
+			if (!isRestricted) {
+				children.add(element);
+			}
 		}
 		return list;
 	}
@@ -252,5 +269,6 @@ public class Structure extends BaseType<StructureInstance> implements ComplexTyp
 			cast = StructureInstanceUpcastReference.upcast(content, to);
 		return cast;
 	}
+
 }
 
