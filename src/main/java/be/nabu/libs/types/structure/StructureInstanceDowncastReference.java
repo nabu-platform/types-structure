@@ -93,6 +93,11 @@ public class StructureInstanceDowncastReference extends StructureInstance {
 	public void set(String path, Object value) {
 		ParsedPath parsedPath = ParsedPath.parse(path);
 		Element<?> element = getType().get(parsedPath.getName());
+		// because we allow restricting of types, it is possible that the field does _not_ exist in the extension, but _does_ exist in the instance we are extending
+		// modified @2019-09-28
+		if (element == null) {
+			element = reference.getType().get(parsedPath.getName());
+		}
 		if (element == null) {
 			throw new NullPointerException("Can not find field " + parsedPath.getName() + " in " + getType());
 		}
