@@ -17,6 +17,7 @@ import be.nabu.libs.types.TypeUtils;
 import be.nabu.libs.types.api.CollectionHandlerProvider;
 import be.nabu.libs.types.api.ComplexContent;
 import be.nabu.libs.types.api.ComplexType;
+import be.nabu.libs.types.api.DefinedType;
 import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.api.SimpleType;
 import be.nabu.libs.types.api.Type;
@@ -87,7 +88,7 @@ public class StructureInstance implements ComplexContent {
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	private Object convert(Object value, Element<?> definition) {
+	private Object convert(Object value, Element<?> definition, boolean wantIndex) {
 		if (value == null)
 			return null;
 		if (definition.getType() instanceof BeanType && ((BeanType) definition.getType()).getBeanClass().equals(java.lang.Object.class)) {
@@ -109,6 +110,12 @@ public class StructureInstance implements ComplexContent {
 		if (type.equals(definition.getType())) {
 			return value;
 		}
+		// the types are not the same instance, but they are two instances of the same type
+		// this should not occur in production except perhaps for a really badly timed reload
+		// this "should" be ok from a value perspective however, so we'll allow it for now (started allowing it @25-02-2020)
+		else if (type instanceof DefinedType && definition.getType() instanceof DefinedType && ((DefinedType) type).getId().equals(((DefinedType) definition.getType()).getId())) {
+			return value;
+		}
 		
 		// need to wrap class
 		TypeInstance targetType = new BaseTypeInstance(type);
@@ -120,13 +127,16 @@ public class StructureInstance implements ComplexContent {
 		}
 		Object converted = TypeConverterFactory.getInstance().getConverter().convert(value, targetType, definition);
 		// if we were unable to convert and the value is a collection of size 1 and the target is not a collection, let's try to just cast the first element
-		if (converted == null && !definition.getType().isList(definition.getProperties())) {
+		// the target may be a list, but if we set it in an indexed way, we still may want to convert it
+		// the usecase was: we have a list where we draw a line from, we add a filter so we only get a single result and draw it to the [0] element of a target list
+		// in this case, the definition would state that it is a list, that's why we added the wantIndex boolean in case we want indexed access to the list
+		if (converted == null && (!definition.getType().isList(definition.getProperties()) || wantIndex)) {
 			CollectionHandlerProvider handler = CollectionHandlerFactory.getInstance().getHandler().getHandler(value.getClass());
 			if (handler != null) {
 				Collection collection = handler.getAsCollection(value);
 				if (collection.size() == 1) {
 					Object next = collection.iterator().next();
-					return convert(next, definition);
+					return convert(next, definition, wantIndex);
 				}
 				else if (collection.size() == 0) {
 					// although there is no guarantee the types would've matched had they been there
@@ -181,7 +191,7 @@ public class StructureInstance implements ComplexContent {
 			if (collection != null) {
 				// simply updating that index
 				if (parsedPath.getChildPath() == null) {
-					value = convert(value, definition);
+					value = convert(value, definition, true);
 					values.put(parsedPath.getName(), collectionHandler.set(collection, index, value));
 				}
 				else {
@@ -234,7 +244,7 @@ public class StructureInstance implements ComplexContent {
 				else {
 					// need to convert
 					for (Object index : collectionHandler.getIndexes(value)) {
-						collectionHandler.set(value, index, convert(collectionHandler.get(value, index), definition));
+						collectionHandler.set(value, index, convert(collectionHandler.get(value, index), definition, false));
 					}
 					values.put(parsedPath.getName(), value);
 				}
@@ -242,7 +252,7 @@ public class StructureInstance implements ComplexContent {
 		}
 		// set value
 		else if (parsedPath.getChildPath() == null)
-			values.put(parsedPath.getName(), convert(value, definition));
+			values.put(parsedPath.getName(), convert(value, definition, false));
 		// setting in child
 		else {
 			Object object = values.get(parsedPath.getName());
