@@ -23,6 +23,7 @@ import be.nabu.libs.types.api.Type;
 import be.nabu.libs.types.base.BaseType;
 import be.nabu.libs.types.base.ValueImpl;
 import be.nabu.libs.types.properties.AttributeQualifiedDefaultProperty;
+import be.nabu.libs.types.properties.DuplicateProperty;
 import be.nabu.libs.types.properties.ElementQualifiedDefaultProperty;
 import be.nabu.libs.types.properties.NameProperty;
 import be.nabu.libs.types.properties.NamespaceProperty;
@@ -92,6 +93,7 @@ public class Structure extends BaseType<StructureInstance> implements ComplexTyp
 		properties.add(SuperTypeProperty.getInstance());
 		properties.add(ValidateProperty.getInstance());
 		properties.add(RestrictProperty.getInstance());
+		properties.add(DuplicateProperty.getInstance());
 		return properties;
 	}
 		
