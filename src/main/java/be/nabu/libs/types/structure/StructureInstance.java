@@ -232,21 +232,22 @@ public class StructureInstance implements ComplexContent {
 				// there is one exception: when integrating with java beans, they have a hard requirement for a specific type of collection but it is then up to the bean instance to enforce this, not the structure instance
 				// code updated @2016-12-06: this _can_ have unforseen side effects
 				CollectionHandlerProvider collectionHandler = CollectionHandlerFactory.getInstance().getHandler().getHandler(value.getClass());
+				// if we don't have a collection handler, we assume you meant to target the first element, we retry with an index
 				if (collectionHandler == null) {
-					collectionHandler = ValueUtils.getValue(CollectionHandlerProviderProperty.getInstance(), definition.getProperties());
+					set(parsedPath.getName() + "[0]", value);
 				}
-				if (collectionHandler == null) {
-					throw new IllegalArgumentException("Can not find a collection handler for: " + value.getClass());
-				}
-				if (collectionHandler instanceof TypedCollectionHandlerProvider && ((TypedCollectionHandlerProvider) collectionHandler).isCompatible(value, definition.getType())) {
-					values.put(parsedPath.getName(), value);
-				}
+				// otherwise we attempt to merge
 				else {
-					// need to convert
-					for (Object index : collectionHandler.getIndexes(value)) {
-						collectionHandler.set(value, index, convert(collectionHandler.get(value, index), definition, false));
+					if (collectionHandler instanceof TypedCollectionHandlerProvider && ((TypedCollectionHandlerProvider) collectionHandler).isCompatible(value, definition.getType())) {
+						values.put(parsedPath.getName(), value);
 					}
-					values.put(parsedPath.getName(), value);
+					else {
+						// need to convert
+						for (Object index : collectionHandler.getIndexes(value)) {
+							collectionHandler.set(value, index, convert(collectionHandler.get(value, index), definition, false));
+						}
+						values.put(parsedPath.getName(), value);
+					}
 				}
 			}
 		}
