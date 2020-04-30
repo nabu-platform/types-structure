@@ -33,8 +33,8 @@ public class StructureUtils {
 		// otherwise we immediately register a new type, so we can make sure our recursive resolving reuses this type instead of going all circular
 		else {
 			newComplexType = new Structure();
-			newComplexType.setSuperType(type);
 			newComplexType.setProperty(type.getProperties());
+			newComplexType.setSuperType(type);
 			restricted.put(type, newComplexType);
 		}
 		// this keeps track of the elements that have to be restricted and optionally replaced with
