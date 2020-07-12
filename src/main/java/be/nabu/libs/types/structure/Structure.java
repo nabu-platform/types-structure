@@ -99,6 +99,19 @@ public class Structure extends BaseType<StructureInstance> implements ComplexTyp
 		
 	@Override
 	public Element<?> get(String path) {
+		// if we ask for an ANY element, check if there is an element of type java.lang.Object
+		// for definition time this works, but at runtime this does not work atm because we can't set any items in an Object.class obviously
+		// we would need to switch it out with a dynamic instance that creates elements as they are set? this brings into question data types etc, so currenlty disabling this until we get a better view on the requirements
+//		if (path.equals(NameProperty.ANY)) {
+//			for (Element<?> child : this) {
+//				if (child.getType() instanceof BeanType && ((BeanType<?>) child.getType()).getBeanClass().equals(Object.class)) {
+//					return child;
+//				}
+//			}
+//			if (getSuperType() instanceof ComplexType) {
+//				return ((ComplexType) getSuperType()).get(path);
+//			}
+//		}
 		return TypeUtils.getChild(this, path);
 	}
 
