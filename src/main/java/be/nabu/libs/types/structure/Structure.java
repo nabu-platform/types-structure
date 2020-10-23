@@ -137,9 +137,10 @@ public class Structure extends BaseType<StructureInstance> implements ComplexTyp
 					}
 				}
 			}
-			if (!isRestricted) {
+			// always add it? otherwise it does not show up in the iterable!
+//			if (!isRestricted) {
 				children.add(element);
-			}
+//			}
 		}
 		return list;
 	}
@@ -182,6 +183,7 @@ public class Structure extends BaseType<StructureInstance> implements ComplexTyp
 
 	@Override
 	public Iterator<Element<?>> iterator() {
+		// it is modified directly by some users, so it must return a correct iterator (looking at you elementtreeitem:move)
 		return children.iterator();
 	}
 
