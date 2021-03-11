@@ -91,13 +91,32 @@ public class StructureInstance implements ComplexContent {
 	private Object convert(Object value, Element<?> definition, boolean wantIndex) {
 		if (value == null)
 			return null;
+		// if the target is an Object, allow anything
 		if (definition.getType() instanceof BeanType && ((BeanType) definition.getType()).getBeanClass().equals(java.lang.Object.class)) {
 			return value;
 		}
+		// if the target is an assignable class, allow it
 		else if (definition.getType() instanceof BeanType && ((BeanType) definition.getType()).getBeanClass().isAssignableFrom(value.getClass())) {
 			return value;
 		}
 		else if (definition.getType() instanceof BeanType && value instanceof ComplexContent) {
+			// if we have a bean instance _or_ the target is an interface (which means we can dynamically wrap anything), unwrap the complex content into a bean
+			if (value instanceof BeanInstance || ((BeanType) definition.getType()).getBeanClass().isInterface()) {
+				Object potential = getAsBean((ComplexContent) value, ((BeanType) definition.getType()).getBeanClass());
+				if (potential != null) {
+					return potential;
+				}	
+			}
+			// it is possible that we "masked" the content, that means the type would be the same, but the content would _not_ be a bean
+			// we assume the target is not an interface, which means dynamic proxying won't work
+			// when communicating with java, this will pose a problem, but as long as we stay away from java bindings, it shouldn't matter too much
+			// for java communication, it is the tooling that wraps around that which should take care of final conversion
+			// if the types are compatible, we return the value itself
+			else if (TypeUtils.isExtension(((ComplexContent) value).getType(), definition.getType())) {
+				return value;
+			}
+			// this is the old code, where we always unwrap the bean. this will fail for the combination of masked content and non-proxyable classes
+			// we leave this here to get the "original" failure mode
 			Object potential = getAsBean((ComplexContent) value, ((BeanType) definition.getType()).getBeanClass());
 			if (potential != null) {
 				return potential;
@@ -236,6 +255,11 @@ public class StructureInstance implements ComplexContent {
 				if (collectionHandler == null) {
 					set(parsedPath.getName() + "[0]", value);
 				}
+				// if we are expecting a map and we have a map, just...map it
+				// don't convert, the collection handling does not work well with that
+				else if (definition.getType() instanceof BeanType && Map.class.isAssignableFrom(((BeanType) definition.getType()).getBeanClass()) && value instanceof Map) {
+					values.put(parsedPath.getName(), value);
+				}
 				// otherwise we attempt to merge
 				else {
 					if (collectionHandler instanceof TypedCollectionHandlerProvider && ((TypedCollectionHandlerProvider) collectionHandler).isCompatible(value, definition.getType())) {
@@ -286,18 +310,22 @@ public class StructureInstance implements ComplexContent {
 			
 			value = collectionHandler.get(value, parsedPath.getIndex());
 		}
+		
 		if (value == null) {
 			return null;
 		}
 		else if (parsedPath.getChildPath() == null) { 
 			return value;
 		}
-		else if (!(value instanceof ComplexContent)) {
-			throw new ClassCastException("The child " + parsedPath.getName() + " is not a complex content");
+		
+		if (!(value instanceof ComplexContent)) {
+			Object converted = ComplexContentWrapperFactory.getInstance().getWrapper().wrap(value);
+			if (converted == null) {
+				throw new ClassCastException("The child " + parsedPath.getName() + " is not a complex content");
+			}
+			value = converted;
 		}
-		else {
-			return ((ComplexContent) value).get(parsedPath.getChildPath().toString());
-		}
+		return ((ComplexContent) value).get(parsedPath.getChildPath().toString());
 	}
 	
 	@Override
