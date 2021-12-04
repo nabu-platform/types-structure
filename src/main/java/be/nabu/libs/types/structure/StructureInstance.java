@@ -1,5 +1,6 @@
 package be.nabu.libs.types.structure;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -258,6 +259,10 @@ public class StructureInstance implements ComplexContent {
 				// if we are expecting a map and we have a map, just...map it
 				// don't convert, the collection handling does not work well with that
 				else if (definition.getType() instanceof BeanType && Map.class.isAssignableFrom(((BeanType) definition.getType()).getBeanClass()) && value instanceof Map) {
+					values.put(parsedPath.getName(), value);
+				}
+				// if we have an object, it doesn't matter, just put it
+				else if (definition.getType() instanceof BeanType && Object.class.equals(((BeanType) definition.getType()).getBeanClass())) {
 					values.put(parsedPath.getName(), value);
 				}
 				// otherwise we attempt to merge
