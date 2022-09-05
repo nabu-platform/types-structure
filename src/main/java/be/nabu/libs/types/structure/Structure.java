@@ -233,6 +233,10 @@ public class Structure extends BaseType<StructureInstance> implements ComplexTyp
 	public void remove(Element<?> element) {
 		children.remove(element);
 	}
+	
+	public void removeAll() {
+		children.clear();
+	}
 
 	@Override
 	public List<ValidationMessage> add(Group group) {

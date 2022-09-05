@@ -8,6 +8,7 @@ import be.nabu.libs.property.api.Value;
 import be.nabu.libs.types.api.DefinedType;
 import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.api.SimpleType;
+import be.nabu.libs.types.api.Type;
 import be.nabu.libs.types.base.SimpleElementImpl;
 
 
@@ -33,7 +34,15 @@ public class SimpleStructure<T> extends Structure implements SimpleType<T> {
 	@Override
 	public Element<?> get(String path) {
 		if (path.equals(SIMPLE_TYPE_VALUE))
-			return new SimpleElementImpl<T>(valueField instanceof DefinedType ? ((DefinedType) valueField).getName() : "anonymous", valueField, null);
+			return new SimpleElementImpl<T>(valueField instanceof DefinedType ? ((DefinedType) valueField).getName() : "anonymous", valueField, null) {
+				// someone might update the type, we need to capture that
+				@SuppressWarnings({ "rawtypes", "unchecked" })
+				@Override
+				public void setType(Type type) {
+					valueField = (SimpleType) type;
+					super.setType(type);
+				}
+			};
 		else
 			return super.get(path);
 	}

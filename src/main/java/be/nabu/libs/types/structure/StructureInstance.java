@@ -271,11 +271,25 @@ public class StructureInstance implements ComplexContent {
 						values.put(parsedPath.getName(), value);
 					}
 					else {
-						// need to convert
-						for (Object index : collectionHandler.getIndexes(value)) {
-							collectionHandler.set(value, index, convert(collectionHandler.get(value, index), definition, false));
+						// if we have a numeric index, we want to set directly in the target element
+						// the problem is twofold with the below loop:
+						// 1) we don't want to change the collections in the original location, you may need them further
+						// 2) some collections are read-only and can not even be updated (e.g. the jdbc array), by forcing numeric access, we force creation of a new, compatible collection
+						if (Number.class.isAssignableFrom(collectionHandler.getIndexClass())) {
+							// we want to unset the existing collection so we don't manipulate it directly
+							set(parsedPath.getName(), null);
+							for (Object index : collectionHandler.getIndexes(value)) {
+								// iteratively set
+								set(parsedPath.getName() + "[" + index + "]", collectionHandler.get(value, index));
+							}
 						}
-						values.put(parsedPath.getName(), value);
+						else {
+							// need to convert
+							for (Object index : collectionHandler.getIndexes(value)) {
+								collectionHandler.set(value, index, convert(collectionHandler.get(value, index), definition, false));
+							}
+							values.put(parsedPath.getName(), value);
+						}
 					}
 				}
 			}
@@ -313,7 +327,15 @@ public class StructureInstance implements ComplexContent {
 				collectionHandler = CollectionHandlerFactory.getInstance().getHandler().getHandler(List.class);
 			}
 			
-			value = collectionHandler.get(value, parsedPath.getIndex());
+			Object index = parsedPath.getIndex();
+			// if we can't use string indexes, convert it
+			if (!collectionHandler.getIndexClass().isAssignableFrom(index.getClass())) {
+				index = ConverterFactory.getInstance().getConverter().convert(index, collectionHandler.getIndexClass());
+				if (index == null) {
+					throw new IllegalArgumentException("Can not convert index '" + parsedPath.getIndex() + "' to: " + collectionHandler.getIndexClass());
+				}
+			}
+			value = collectionHandler.get(value, index);
 		}
 		
 		if (value == null) {
