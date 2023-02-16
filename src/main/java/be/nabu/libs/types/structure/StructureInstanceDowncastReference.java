@@ -120,10 +120,16 @@ public class StructureInstanceDowncastReference extends StructureInstance {
 	@Override
 	public Object get(String path) {
 		ParsedPath parsedPath = ParsedPath.parse(path);
-		if (TypeUtils.getLocalChild(getType(), parsedPath.getName()) != null)
+		if (TypeUtils.isLocalChild(getType(), parsedPath.getName())) {
 			return super.get(path);
-		else
+		}
+		else {
 			return reference.get(path);
+		}
+//		if (TypeUtils.getLocalChild(getType(), parsedPath.getName()) != null)
+//			return super.get(path);
+//		else
+//			return reference.get(path);
 	}
 	
 	@Override
