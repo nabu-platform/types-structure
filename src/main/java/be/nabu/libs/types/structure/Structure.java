@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -27,6 +26,7 @@ import be.nabu.libs.types.api.Type;
 import be.nabu.libs.types.base.BaseType;
 import be.nabu.libs.types.base.ValueImpl;
 import be.nabu.libs.types.properties.AttributeQualifiedDefaultProperty;
+import be.nabu.libs.types.properties.CollectionCrudProviderProperty;
 import be.nabu.libs.types.properties.DuplicateProperty;
 import be.nabu.libs.types.properties.ElementQualifiedDefaultProperty;
 import be.nabu.libs.types.properties.NameProperty;
@@ -103,6 +103,7 @@ public class Structure extends BaseType<StructureInstance> implements ComplexTyp
 		properties.add(ValidateProperty.getInstance());
 		properties.add(RestrictProperty.getInstance());
 		properties.add(DuplicateProperty.getInstance());
+		properties.add(CollectionCrudProviderProperty.getInstance());
 		return properties;
 	}
 	// moving away from the suboptimal typeutils.getchild i did not reimplement (currently) the aliased lookup. aliases are primarily used when clean names can not be created at all, they would likely not be parsed properly properly by parsedpath anyway
