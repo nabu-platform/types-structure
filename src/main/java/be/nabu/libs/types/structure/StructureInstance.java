@@ -88,6 +88,13 @@ public class StructureInstance implements ComplexContent {
 		return definition;
 	}
 
+	
+	@Override
+	public boolean has(String path) {
+		// TODO: use parsedpath and recurse
+		return values.containsKey(path);
+	}
+
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	private Object convert(Object value, Element<?> definition, boolean wantIndex) {
 		if (value == null)

@@ -90,6 +90,11 @@ public class StructureInstanceDowncastReference extends StructureInstance {
 	}
 
 	@Override
+	public boolean has(String path) {
+		return super.has(path) || reference.has(path);
+	}
+
+	@Override
 	public void set(String path, Object value) {
 		ParsedPath parsedPath = ParsedPath.parse(path);
 		Element<?> element = getType().get(parsedPath.getName());

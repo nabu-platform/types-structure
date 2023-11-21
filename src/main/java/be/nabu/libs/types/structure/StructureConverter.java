@@ -21,6 +21,8 @@ public class StructureConverter implements TypeConverter {
 		}
 		
 		ComplexContent complexInstance = (ComplexContent) instance;
+		// @2023-11-06 could also do an id check but it is unclear if this would cascade into different issues down the line
+		//  || (from instanceof DefinedType && to instanceof DefinedType && ((DefinedType) from).getId().equals(((DefinedType) to).getId()))
 		if (from.getType().equals(to.getType()))
 			return complexInstance;
 		

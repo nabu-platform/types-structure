@@ -47,6 +47,11 @@ public class StructureInstanceUpcastReference extends StructureInstance {
 		setType(cast);
 	}
 	
+	@Override
+	public boolean has(String path) {
+		return super.has(path) || reference.has(path);
+	}
+	
 	public ComplexContent getReference() {
 		return reference;
 	}
