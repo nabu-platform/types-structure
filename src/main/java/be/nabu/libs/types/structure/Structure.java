@@ -24,7 +24,9 @@ import be.nabu.libs.types.api.ModifiableComplexType;
 import be.nabu.libs.types.api.RestrictableComplexType;
 import be.nabu.libs.types.api.Type;
 import be.nabu.libs.types.base.BaseType;
+import be.nabu.libs.types.base.TypeBaseUtils;
 import be.nabu.libs.types.base.ValueImpl;
+import be.nabu.libs.types.properties.AllowProperty;
 import be.nabu.libs.types.properties.AttributeQualifiedDefaultProperty;
 import be.nabu.libs.types.properties.CollectionCrudProviderProperty;
 import be.nabu.libs.types.properties.DuplicateProperty;
@@ -101,6 +103,7 @@ public class Structure extends BaseType<StructureInstance> implements ComplexTyp
 		Set<Property<?>> properties = super.getSupportedProperties(values);
 		properties.add(SuperTypeProperty.getInstance());
 		properties.add(ValidateProperty.getInstance());
+		properties.add(AllowProperty.getInstance());
 		properties.add(RestrictProperty.getInstance());
 		properties.add(DuplicateProperty.getInstance());
 		properties.add(CollectionCrudProviderProperty.getInstance());
@@ -125,12 +128,9 @@ public class Structure extends BaseType<StructureInstance> implements ComplexTyp
 		}
 		
 		// if we have a property that restricts from the parent, don't cascade
-		String restricted = ValueUtils.getValue(RestrictProperty.getInstance(), getProperties());
 		// if we have restricted it, don't go to the supertype
-		if (restricted != null) {
-			if (Arrays.asList(restricted.split("[\\s]*,[\\s]*")).indexOf(parsedPath.getName()) >= 0) {
-				return null;
-			}
+		if (TypeBaseUtils.getRestricted(this).indexOf(parsedPath.getName()) >= 0) {
+			return null;
 		}
 		if (element == null && getSuperType() instanceof ComplexType) {
 			element = ((ComplexType) getSuperType()).get(parsedPath.getName());
@@ -192,9 +192,8 @@ public class Structure extends BaseType<StructureInstance> implements ComplexTyp
 			if (getSuperType() instanceof ComplexType) {
 				Element<?> parentElement = ((ComplexType) getSuperType()).get(element.getName());
 				if (parentElement != null) {
-					String value = ValueUtils.getValue(RestrictProperty.getInstance(), getProperties());
 					// if we restrict it from the parent, we can redefine it as we please
-					List<String> restricted = value == null || value.trim().isEmpty() ? new ArrayList<String>() : Arrays.asList(value.trim().split("[\\s]*,[\\s]*"));
+					List<String> restricted = TypeBaseUtils.getRestricted(this);
 					if (restricted.indexOf(element.getName()) < 0) {
 						restrictions.put(element.getName(), element);
 						isRestricted = true;
