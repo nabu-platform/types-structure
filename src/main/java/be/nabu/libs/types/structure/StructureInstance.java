@@ -251,7 +251,8 @@ public class StructureInstance implements ComplexContent {
 			if (parsedPath.getChildPath() != null)
 				throw new RuntimeException("Can not access list " + definition.getName() + " without an index");
 			else if (value == null)
-				values.remove(parsedPath.getName());
+				// @2024-02-28: before we removed the value, but that means the "has" doesn't know that it was changed!
+				values.put(parsedPath.getName(), null);
 			else {
 				// in the past this code enforced the "correct" collection handler if dictated by the type, so for instance if the type says its a list and you give an array, it will transform the collection
 				// however, this removes some of the flexibility of having for example a jdbc result set as a value
