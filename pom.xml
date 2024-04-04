@@ -32,5 +32,9 @@
 			<groupId>be.nabu.libs.types</groupId>
 			<artifactId>types-java</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>be.nabu.libs.types</groupId>
+			<artifactId>types-mask</artifactId>
+		</dependency>
 	</dependencies>
 </project>

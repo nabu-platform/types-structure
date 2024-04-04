@@ -3,12 +3,19 @@ package be.nabu.libs.types.structure;
 import java.util.Collections;
 import java.util.List;
 
+import be.nabu.libs.converter.ConverterFactory;
+import be.nabu.libs.types.ComplexContentWrapperFactory;
 import be.nabu.libs.types.ParsedPath;
+import be.nabu.libs.types.SimpleTypeWrapperFactory;
+import be.nabu.libs.types.TypeConverterFactory;
 import be.nabu.libs.types.TypeUtils;
 import be.nabu.libs.types.api.ComplexContent;
 import be.nabu.libs.types.api.ComplexType;
+import be.nabu.libs.types.api.DefinedSimpleType;
 import be.nabu.libs.types.api.Element;
+import be.nabu.libs.types.api.SimpleType;
 import be.nabu.libs.types.api.Type;
+import be.nabu.libs.types.mask.MaskedContent;
 
 /**
  * This is wrapped around another complex content and adds new fields
@@ -125,8 +132,43 @@ public class StructureInstanceDowncastReference extends StructureInstance {
 	@Override
 	public Object get(String path) {
 		ParsedPath parsedPath = ParsedPath.parse(path);
+		// if it is a local child
 		if (TypeUtils.isLocalChild(getType(), parsedPath.getName())) {
-			return super.get(path);
+			// check that a value has been set in this instance, if so we ignore any parent value you might have
+			if (super.has(parsedPath.getName())) {
+				return super.get(path);
+			}
+			// if not, check if it was restricted and re-added, in that case a valid value may be available in the parent
+			else if (getType().getSuperType() instanceof ComplexType && ((ComplexType) getType().getSuperType()).get(parsedPath.getName()) != null) {
+				Object object = reference.get(path);
+				if (object != null) {
+					Element<?> fromElement = reference.getType().get(parsedPath.getName());
+					Element<?> toElement = getType().get(parsedPath.getName());
+					// simple types are assumed to be immutable and are sent raw
+					if (fromElement.getType() instanceof SimpleType && toElement.getType() instanceof SimpleType) {
+						// no conversion necessary
+						if (fromElement.getType().equals(toElement.getType())) {
+							return object;
+						}
+						// otherwise, we convert it
+						return TypeConverterFactory.getInstance().getConverter().convert(object, fromElement, toElement);		
+					}
+					// if both are complex, we mask it (?) to prevent referential changes on the one hand and to ensure compatibility on the other
+					else if (fromElement.getType() instanceof ComplexType && toElement.getType() instanceof ComplexType) {
+						ComplexContent complexContent = object instanceof ComplexContent ? (ComplexContent) object : ComplexContentWrapperFactory.getInstance().getWrapper().wrap(object);
+						if (complexContent == null) {
+							throw new IllegalArgumentException("Could not be cast to complex content for autowrapping: " + object);
+						}
+						return new MaskedContent(complexContent, (ComplexType) toElement.getType());
+					}
+					// @2024-03-27: we do not currently support autocasting simple types to complex types and back when restricting and re-adding
+					// we do want to allow you to do that though, we just can't automatically port the value so we send back null
+					else {
+						return null;
+					}
+				}
+			}
+			return null;
 		}
 		else {
 			return reference.get(path);
