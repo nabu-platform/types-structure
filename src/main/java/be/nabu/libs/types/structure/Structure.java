@@ -116,6 +116,9 @@ public class Structure extends BaseType<StructureInstance> implements ComplexTyp
 		Element<?> element = childMap.get(parsedPath.getName());
 		
 		if (element != null) {
+			if (parsedPath.getChildPath() != null && element.getType() instanceof ComplexType) {
+				return ((ComplexType) element.getType()).get(parsedPath.getChildPath().toString());
+			}
 			return element;
 		}
 		
