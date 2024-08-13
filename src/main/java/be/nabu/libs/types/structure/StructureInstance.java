@@ -1,6 +1,5 @@
 package be.nabu.libs.types.structure;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -206,7 +205,7 @@ public class StructureInstance implements ComplexContent {
 			if (collectionHandler == null) {
 				collectionHandler = CollectionHandlerFactory.getInstance().getHandler().getHandler(List.class);
 			}
-			Object index = collectionHandler.unmarshalIndex(parsedPath.getIndex());
+			Object index = collectionHandler.unmarshalIndex(parsedPath.getIndex(), collection);
 			// no list set yet, generate one that matches at least the size of the minOccurs for this element
 			if (collection == null && (CREATE_PARENT_FOR_NULL_VALUE || value != null)) {
 				int size = index instanceof Integer ? ((Integer) index) + 1 : 1;
@@ -335,14 +334,16 @@ public class StructureInstance implements ComplexContent {
 				collectionHandler = CollectionHandlerFactory.getInstance().getHandler().getHandler(List.class);
 			}
 			
-			Object index = parsedPath.getIndex();
-			// if we can't use string indexes, convert it
-			if (!collectionHandler.getIndexClass().isAssignableFrom(index.getClass())) {
-				index = ConverterFactory.getInstance().getConverter().convert(index, collectionHandler.getIndexClass());
-				if (index == null) {
-					throw new IllegalArgumentException("Can not convert index '" + parsedPath.getIndex() + "' to: " + collectionHandler.getIndexClass());
-				}
-			}
+			// @2024-08-12: not sure why we were using other code to unmarshal the index?
+			Object index = collectionHandler.unmarshalIndex(parsedPath.getIndex(), value);
+//			Object index = parsedPath.getIndex();
+//			// if we can't use string indexes, convert it
+//			if (!collectionHandler.getIndexClass().isAssignableFrom(index.getClass())) {
+//				index = ConverterFactory.getInstance().getConverter().convert(index, collectionHandler.getIndexClass());
+//				if (index == null) {
+//					throw new IllegalArgumentException("Can not convert index '" + parsedPath.getIndex() + "' to: " + collectionHandler.getIndexClass());
+//				}
+//			}
 			value = collectionHandler.get(value, index);
 		}
 		
