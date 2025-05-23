@@ -20,15 +20,12 @@ package be.nabu.libs.types.structure;
 import java.util.Collections;
 import java.util.List;
 
-import be.nabu.libs.converter.ConverterFactory;
 import be.nabu.libs.types.ComplexContentWrapperFactory;
 import be.nabu.libs.types.ParsedPath;
-import be.nabu.libs.types.SimpleTypeWrapperFactory;
 import be.nabu.libs.types.TypeConverterFactory;
 import be.nabu.libs.types.TypeUtils;
 import be.nabu.libs.types.api.ComplexContent;
 import be.nabu.libs.types.api.ComplexType;
-import be.nabu.libs.types.api.DefinedSimpleType;
 import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.api.SimpleType;
 import be.nabu.libs.types.api.Type;
@@ -146,6 +143,7 @@ public class StructureInstanceDowncastReference extends StructureInstance {
 //			reference.set(path, value);
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public Object get(String path) {
 		ParsedPath parsedPath = ParsedPath.parse(path);
