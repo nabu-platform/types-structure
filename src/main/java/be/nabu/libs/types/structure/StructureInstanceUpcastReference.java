@@ -80,6 +80,14 @@ public class StructureInstanceUpcastReference extends StructureInstance {
 	public void set(String path, Object value) {
 		reference.set(path, value);
 	}
+	
+	/**
+	 * Delegate to reference, copying the "set" behavior
+	 */
+	@Override
+	public void delete(String path) {
+		reference.delete(path);
+	}
 
 	/**
 	 * Delegate to reference

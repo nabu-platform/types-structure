@@ -114,6 +114,24 @@ public class StructureInstanceDowncastReference extends StructureInstance {
 	public boolean has(String path) {
 		return super.has(path) || reference.has(path);
 	}
+	
+	@Override
+	public void delete(String path) {
+		ParsedPath parsedPath = ParsedPath.parse(path);
+		Element<?> element = getType().get(parsedPath.getName());
+		if (element == null) {
+			element = reference.getType().get(parsedPath.getName());
+		}
+		if (element == null) {
+			throw new NullPointerException("Can not find field " + parsedPath.getName() + " in " + getType());
+		}
+		if (getType().equals(element.getParent())) {
+			super.delete(path);
+		}
+		else {
+			reference.delete(path);
+		}
+	}
 
 	@Override
 	public void set(String path, Object value) {

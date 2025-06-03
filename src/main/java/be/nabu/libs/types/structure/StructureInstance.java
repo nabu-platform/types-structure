@@ -110,6 +110,57 @@ public class StructureInstance implements ComplexContent {
 		// TODO: use parsedpath and recurse
 		return values.containsKey(path);
 	}
+	
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	@Override
+	public void delete(String path) {
+		ParsedPath parsedPath = ParsedPath.parse(path);
+		Element<?> definition = getType().get(parsedPath.getName());
+		if (definition == null) {
+			throw new IllegalArgumentException("Could not find definition for '" + parsedPath.getName() + "' in: " + getType());
+		}
+		// only relevant to proceed if we have _a_ value
+		if (values.containsKey(parsedPath.getName())) {
+			if (parsedPath.getIndex() != null) {
+				Object collection = values.get(parsedPath.getName());
+				CollectionHandlerProvider collectionHandler = ValueUtils.getValue(new CollectionHandlerProviderProperty(), definition.getProperties());
+				// defaults to a list
+				if (collectionHandler == null) {
+					collectionHandler = CollectionHandlerFactory.getInstance().getHandler().getHandler(List.class);
+				}
+				Object index = collectionHandler.unmarshalIndex(parsedPath.getIndex(), collection);
+				if (collection != null) {
+					// if we are not deleting a child, we want to delete the entry itself, but this is not really possible in java unless we construct a new array with one less item
+					// so in this particular case, we still set to null
+					if (parsedPath.getChildPath() == null) {
+						values.put(parsedPath.getName(), collectionHandler.set(collection, index, null));
+					}
+					else {
+						Object childObject = collectionHandler.get(collection, index);
+						ComplexContent child = null;
+						if (childObject != null) {
+							child = childObject instanceof ComplexContent ? (ComplexContent) childObject : ComplexContentWrapperFactory.getInstance().getWrapper().wrap(childObject);
+						}
+						// for deletes we do NOT create the child if it does not exist, the whole point is deleting
+						if (child != null) {
+							child.delete(parsedPath.getChildPath().toString());
+						}
+					}
+				}
+			}
+			else if (parsedPath.getChildPath() != null) {
+				Object object = values.get(parsedPath.getName());
+				ComplexContent child = object instanceof ComplexContent || object == null ? (ComplexContent) object : ComplexContentWrapperFactory.getInstance().getWrapper().wrap(object);
+				// for deletes we do NOT create the child if it does not exist, the whole point is deleting
+				if (child != null) {
+					child.delete(parsedPath.getChildPath().toString());
+				}
+			}
+			else {
+				values.remove(parsedPath.getName());
+			}
+		}
+	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	private Object convert(Object value, Element<?> definition, boolean wantIndex) {
