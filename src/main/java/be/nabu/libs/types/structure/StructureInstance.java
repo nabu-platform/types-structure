@@ -275,7 +275,7 @@ public class StructureInstance implements ComplexContent {
 			}
 			Object index = collectionHandler.unmarshalIndex(parsedPath.getIndex(), collection);
 			// no list set yet, generate one that matches at least the size of the minOccurs for this element
-			if (collection == null && (CREATE_PARENT_FOR_NULL_VALUE || value != null)) {
+			if (collection == null && (CREATE_LIST_FOR_NULL_VALUE || value != null)) {
 				int size = index instanceof Integer ? ((Integer) index) + 1 : 1;
 				// the collection handler must allow a null create
 				collection = collectionHandler.create(null, size);
